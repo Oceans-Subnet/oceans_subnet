@@ -5,8 +5,8 @@
 
 ---
 
-## 1. Purpose of This Guide
-This document explains how to operate a **miner** on Oceans Subnet 66.
+## 1. Clarification
+To miner on Oceans66 you don't need to run a miner. Validator will fetch your liquidity positions from the coldkey you registered with.
 
 ---
 
