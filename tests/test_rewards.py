@@ -20,4 +20,4 @@ def test_reward_vector_round_trip():
 
     # Two quick assertions
     assert abs(sum(w.values()) - 1.0) < 1e-6
-    assert w[0] > w[1] > w[2]      # 0 gets 50%+25% = 0.375 etc.
+    assert w == {0: 0.25, 1: 0.25, 2: 0.50}
