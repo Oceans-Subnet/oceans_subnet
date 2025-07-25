@@ -140,7 +140,7 @@ class EpochValidatorNeuron(BaseValidatorNeuron):
 
                     self._bootstrapped = True
 
-                # Status banner every few blocks ----------------------- #
+                # Status banner every few blocks ----------------------- #d
                 next_head = start + ep_len
                 into = blk - start
                 left = max(1, next_head - blk)

@@ -28,6 +28,12 @@ DEFAULT_NETUID = 66
 DECIMALS = 10**9
 SAMPLE_POINTS = 10
 
+# ── Validator specific  ───────────────────────────────────────────────
+VOTE_API_ENDPOINT: AnyUrl | str = Field(
+    "https://oceans66.com",    # ← changed
+    env="VOTE_API_ENDPOINT",
+)
+
 # ──────────────────────────────────────────────────────────────
 # 1. Settings object (use everywhere instead of os.getenv)
 # ──────────────────────────────────────────────────────────────
