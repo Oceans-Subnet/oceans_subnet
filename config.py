@@ -30,7 +30,7 @@ SAMPLE_POINTS = 10
 
 # ── Validator specific  ───────────────────────────────────────────────
 VOTE_API_ENDPOINT: AnyUrl | str = Field(
-    "https://oceans66.com",    # ← changed
+    "TODO",    # ← To be filled
     env="VOTE_API_ENDPOINT",
 )
 
