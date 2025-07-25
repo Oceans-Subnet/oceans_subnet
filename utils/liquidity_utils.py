@@ -29,15 +29,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from bittensor import AsyncSubtensor  # core client
+from bittensor import AsyncSubtensor  
+from bittensor.utils.liquidity import LiquidityPosition  
 
-# Robust LiquidityPosition import
-try:
-    from bittensor.utils.liquidity import LiquidityPosition  # ≥ v7.2
-except ImportError:  # pragma: no cover
-    from bittensor import LiquidityPosition  # legacy path
-
-from utils.subnet_utils import get_metagraph  # type: ignore
+from utils.subnet_utils import get_metagraph  
 
 # ────────────────────────────────────────────────────────────────────────────
 # Data objects
