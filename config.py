@@ -15,12 +15,18 @@ from pathlib import Path
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from pydantic import AnyUrl, BaseSettings, Field, validator
+from pydantic import AnyUrl, Field, validator
+from pydantic_settings import BaseSettings
 
 # ──────────────────────────────────────────────────────────────
 # 0. Load .env early so that pydantic can pick up the variables
 # ──────────────────────────────────────────────────────────────
 load_dotenv()
+
+DEFAULT_BITTENSOR_NETWORK = "finney"
+DEFAULT_NETUID = 66
+DECIMALS = 10**9
+SAMPLE_POINTS = 10
 
 # ──────────────────────────────────────────────────────────────
 # 1. Settings object (use everywhere instead of os.getenv)

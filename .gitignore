@@ -11,3 +11,4 @@ __pycache__/
 .pytest_cache
 local/
 liquidity_env/*
+validator_env/*

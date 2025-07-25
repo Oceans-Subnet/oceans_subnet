@@ -12,3 +12,4 @@ pyotp
 loguru
 rich
 bittensor-cli
+pydantic-settings
