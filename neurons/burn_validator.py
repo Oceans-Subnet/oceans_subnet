@@ -1,6 +1,6 @@
 # ╭──────────────────────────────────────────────────────────────────────╮
 # neurons/validator.py                                                   #
-# Simplified 2025‑07‑10 – ALWAYS sets full weight to UID 0               #
+# ALWAYS sets full weight to UID 0               #
 # ╰──────────────────────────────────────────────────────────────────────╯
 from __future__ import annotations
 
