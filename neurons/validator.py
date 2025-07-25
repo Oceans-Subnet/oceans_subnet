@@ -25,8 +25,8 @@ from config import settings
 from validator.state_cache import StateCache
 from validator.vote_fetcher import VoteFetcher
 from validator.liquidity_fetcher import LiquidityFetcher
-from validator.rewards import RewardCalculator      # v0 placeholder
-from validator.forward import forward               # ← NEW import ⬅️
+from validator.rewards import RewardCalculator      
+from validator.forward import forward               
 
 
 # ──────────────────────────────────────────────────────────────────────

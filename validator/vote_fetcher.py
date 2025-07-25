@@ -86,6 +86,7 @@ class VoteFetcher:
         snapshots: List[VoteSnapshot] = []
         with self.cache._session() as db:  # pylint: disable=protected-access
             for v in votes:
+                for sid, w in v.weights.items():
                 # De‑duplication: skip if (voter_hotkey, block_height) exists.
                 if not self.cache.votes_changed(v.block_height, v.voter_hotkey):
                     continue

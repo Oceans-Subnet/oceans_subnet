@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from config import settings
 from storage.models import LiquiditySnapshot
 from validator.state_cache import StateCache
+from collections import defaultdict
 from utils.liquidity_utils import (
     LiquiditySubnet,
     fetch_subnet_liquidity_positions,
@@ -102,6 +103,16 @@ class LiquidityFetcher:
             self.cache.persist_liquidity(new_snapshots)
 
         log.info("LiquidityFetcher stored %d new snapshots", len(new_snapshots))
+        
+        liq_map: Dict[int, Dict[int, float]] = defaultdict(dict)
+        for (ck, subnet, blk), usd_val in aggregated.items():
+            # Assuming you have a reliable coldkey→uid lookup:
+            uid = self._coldkey_to_uid(ck, subnet)
+            if uid is not None:
+                liq_map[subnet][uid] = usd_val
+
+        self.cache.liquidity = liq_map
+
         return new_snapshots
 
     # --------------------------------------------------------------------- #

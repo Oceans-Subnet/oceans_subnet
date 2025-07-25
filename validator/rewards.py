@@ -54,7 +54,7 @@ class RewardCalculator:
         * If no meaningful data are available the function falls back to a
           uniform distribution.
         """
-        uids = getattr(metagraph, "uids", None)
+        uids = list(getattr(metagraph, "uids", []))
         if not uids:
             return {}
 
@@ -71,7 +71,7 @@ class RewardCalculator:
 
             lp_by_uid = liquidity.get(subnet_id, {})
             total_liq = sum(lp_by_uid.values())
-            if total_liq <= 0.0:
+            if not lp_by_uid or total_liq <= 0.0:
                 continue  # nothing staked on this subnet
 
             scale = weight_sn / total_liq
