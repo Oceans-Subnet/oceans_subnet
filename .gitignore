@@ -12,3 +12,6 @@ __pycache__/
 local/
 liquidity_env/*
 validator_env/*
+Oceans
+*.egg-info/
+*.egg
