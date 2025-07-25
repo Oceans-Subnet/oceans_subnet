@@ -9,7 +9,7 @@ import math
 
 import pytest
 
-from vote_api_client import VoteAPIClient
+from api.client import VoteAPIClient
 
 # ---------------------------------------------------------------------------#
 # Expected hard‑coded values (mirror the constants in vote_api_client.py)
