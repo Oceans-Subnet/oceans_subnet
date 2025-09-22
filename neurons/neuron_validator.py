@@ -147,7 +147,7 @@ class EpochValidatorNeuron(BaseValidatorNeuron):
     # Main loop (patched)
     # ---------------------------------------------------- #
     def run(self):  # noqa: D401
-        bt.logging.success(
+        bt.logging.warning(
             f"EpochValidator starting at block {self.block:,} (netuid {self.config.netuid})"
         )
 
