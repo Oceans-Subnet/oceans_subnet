@@ -141,6 +141,7 @@ async def fetch_subnet_liquidity_positions(
             async with semaphore:
                 wallet_stub = _StubWallet(cold_ss58)
                 try:
+                    block = await subtensor.block
                     bt.logging.warning(f"[liquidity_utils] Querying {cold_ss58[:6]}…, subnet {uid}, block {block},reuse {block is None}")
                     positions = await subtensor.get_liquidity_list(
                         wallet=wallet_stub,
@@ -155,7 +156,7 @@ async def fetch_subnet_liquidity_positions(
                     )
                     return cold_ss58, positions
                 except Exception as err:  # noqa: BLE001
-                    logger.warning(
+                    logger.error(
                         "[%s] error fetching positions: %s", cold_ss58[:6], err
                     )
                     return cold_ss58, []
