@@ -274,7 +274,6 @@ class LiquidityFetcher:
         block: Optional[int],
     ) -> List[LiquiditySubnet]:
         async with AsyncSubtensor(network=settings.BITTENSOR_NETWORK) as subtensor:
-            block = await subtensor.block
             return await fetch_subnet_liquidity_positions(
                 subtensor,
                 netuid=netuid,
