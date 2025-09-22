@@ -108,6 +108,7 @@ class LiquidityFetcher:
             f"Fetching current prices, block={block}"
         )
         price_map = await self._fetch_current_prices(subnet_ids, block=block)
+        bt.logging.warning(f"[LiquidityFetcher] Prices: {price_map}")
         if not price_map:
             bt.logging.warning(
                 "[LiquidityFetcher] No current prices available; all contributions will be 0."
