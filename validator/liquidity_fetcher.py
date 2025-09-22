@@ -187,6 +187,9 @@ class LiquidityFetcher:
                     aggregated[(coldkey, ls.netuid, block or 0)] = tao_sum
 
         # 4️⃣  Persist new LiquiditySnapshot rows ------------------------
+        bt.logging.warning(
+            f"[LiquidityFetcher] Aggregated {aggregated} (coldkey, subnet) pairs"
+        )
         new_rows: List[LiquiditySnapshot] = []
         with self.cache._session() as db:  # pylint: disable=protected-access
             for (ck, subnet, blk), tao_val in aggregated.items():
@@ -205,6 +208,9 @@ class LiquidityFetcher:
                             block_height=blk,
                         )
                     )
+        bt.logging.warning(
+            f"new_rows prepared: {new_rows}"
+        )
 
         if new_rows:
             self.cache.persist_liquidity(new_rows)
@@ -224,7 +230,7 @@ class LiquidityFetcher:
                 )
                 continue
             liq_map[subnet][uid] = tao_val
-            bt.logging.debug(
+            bt.logging.warning(
                 f"[LiquidityFetcher] Map entry: subnet {subnet} uid {uid} "
                 f"→ {tao_val:.9f} TAO"
             )
@@ -232,7 +238,7 @@ class LiquidityFetcher:
         self.cache.liquidity = liq_map
         bt.logging.warning(
             f"[LiquidityFetcher] liquidity map updated "
-            f"({len(liq_map)} subnets, total "
+            f"(liquidity map {liq_map}"
             f"{sum(len(v) for v in liq_map.values())} UIDs)"
         )
         return new_rows
