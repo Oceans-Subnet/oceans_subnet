@@ -104,9 +104,9 @@ class LiquidityFetcher:
 
         # 2.5️⃣ Fetch current prices once per subnet ---------------------
         subnet_ids = [ls.netuid for ls in liquidity_subnets]
-         bt.logging.warning(
-                f"Fetching current prices, block={block}"
-            )
+        bt.logging.warning(
+            f"Fetching current prices, block={block}"
+        )
         price_map = await self._fetch_current_prices(subnet_ids, block=block)
         if not price_map:
             bt.logging.warning(
