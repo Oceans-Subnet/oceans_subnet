@@ -148,7 +148,7 @@ async def fetch_subnet_liquidity_positions(
                         reuse_block=block is None,
                     )
                     positions = positions or []
-                    bt.logging.debug(
+                    bt.logging.warning(
                         f"[liquidity_utils] subnet {uid} coldkey {cold_ss58[:6]}… "
                         f"→ {len(positions)} positions"
                     )
