@@ -158,9 +158,9 @@ async def fetch_subnet_liquidity_positions(
                         )
                     return cold_ss58, positions
                 except Exception as err:  # noqa: BLE001
-                    logger.error(
-                        "[%s] error fetching positions: %s", cold_ss58[:6], err
-                    )
+                    # logger.error(
+                    #     "[%s] error fetching positions: %s", cold_ss58[:6], err
+                    # )
                     return cold_ss58, []
 
         tasks = [_query_single_ck(ck) for ck in src_coldkeys]
