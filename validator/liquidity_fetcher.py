@@ -48,7 +48,7 @@ class LiquidityFetcher:
     MIN_RELATIVE_WIDTH: float = float(getattr(settings, "MIN_RELATIVE_WIDTH", 0.0))
 
     # If True, only count positions where current price is strictly in-range.
-    COUNT_ONLY_IN_RANGE: bool = bool(getattr(settings, "COUNT_ONLY_IN_RANGE", False))
+    COUNT_ONLY_IN_RANGE: bool = bool(getattr(settings, "COUNT_ONLY_IN_RANGE", True))
 
     # ------------------------------------------------------------------ #
     # Construction
