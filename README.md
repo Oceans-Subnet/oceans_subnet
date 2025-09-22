@@ -9,7 +9,7 @@
     style="border-radius:50%; display:block">
 </picture>
 
-# **Oceans Subnet 66** <!-- omit in toc -->
+# **Oceans Subnet 66**
 
 [![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
