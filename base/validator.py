@@ -151,7 +151,7 @@ class BaseValidatorNeuron(BaseNeuron):
             version_key=self.metagraph.hparams.weights_version,
         )
         if ok:
-            bt.logging.info("set_weights on chain successfully!")
+            bt.logging.warning("set_weights on chain successfully!")
         else:
             bt.logging.error("set_weights failed", msg)
 
@@ -204,7 +204,7 @@ class BaseValidatorNeuron(BaseNeuron):
         scattered[uids] = rewards
 
         alpha = 0.1
-        bt.logging.debug(
+        bt.logging.warning(
             f"Updating scores with alpha={alpha}, "
             f"rewards={rewards}, uids={uids}, scattered={scattered}, scores={self.scores}"
         )
