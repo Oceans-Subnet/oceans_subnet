@@ -15,7 +15,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 import bittensor as bt
 from bittensor import AsyncSubtensor            # type: ignore
 from bittensor.utils.balance import Balance
-from bittensor.utils.formatting import fixed_to_float
+from bittensor.utils.balance import fixed_to_float
 from sqlalchemy.orm import Session
 
 from config import settings
