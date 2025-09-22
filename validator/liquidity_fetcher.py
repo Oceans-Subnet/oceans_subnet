@@ -330,7 +330,7 @@ class LiquidityFetcher:
 
     # ---------- UID map (coldkey → UID on subnet 66) ------------------- #
     async def _load_primary_uid_map(self, *, block: Optional[int]) -> None:
-        bt.logging.info(
+        bt.logging.warning(
             f"[LiquidityFetcher] Loading UID map for subnet {self.primary_netuid}"
         )
         async with AsyncSubtensor(network=settings.BITTENSOR_NETWORK) as subtensor:
@@ -341,6 +341,6 @@ class LiquidityFetcher:
                 str(ck): int(uid) for uid, ck in zip(mg.uids, mg.coldkeys)
             }
         self._primary_loaded = True
-        bt.logging.info(
+        bt.logging.warning(
             f"[LiquidityFetcher] UID map loaded ({len(self._primary_uid_map)} entries)"
         )

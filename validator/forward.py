@@ -13,12 +13,12 @@ async def forward(neuron) -> None:
     running validator (`neuron`) via `neuron.update_scores()`.
     """
     # 1️⃣  Ingest fresh data ------------------------------------------------
-    bt.logging.info("[forward] Fetching latest on‑chain and off‑chain data…")
+    bt.logging.success("[forward] Fetching latest on‑chain and off‑chain data…")
     neuron.vote_fetcher.fetch_and_store()             # synchronous
     await neuron.liq_fetcher.fetch_and_store()        # asynchronous – await
 
     # 2️⃣  Compute per‑miner raw scores ------------------------------------
-    bt.logging.info("[forward] Computing raw miner scores…")
+    bt.logging.success("[forward] Computing raw miner scores…")
     uid_scores: Dict[int, float] = neuron.reward_calc.compute(
         metagraph=neuron.metagraph
     )
@@ -39,11 +39,11 @@ async def forward(neuron) -> None:
     else:
         boosted.fill(1.0 / num_uids)
 
-    bt.logging.info(
+    bt.logging.success(
         f"[forward] Normalised scores for {num_uids} miners (Σ = {boosted.sum():.6f})."
     )
 
     # 5️⃣  Persist the scores on the neuron object -------------------------
-    bt.logging.info(f"[forward] Updating neuron's score table…")
-    bt.logging.debug(f"[forward] {boosted=}, {uids_np=}")
+    bt.logging.success(f"[forward] Updating neuron's score table…")
+    bt.logging.success(f"[forward] {boosted=}, {uids_np=}")
     neuron.update_scores(boosted, uids_np)

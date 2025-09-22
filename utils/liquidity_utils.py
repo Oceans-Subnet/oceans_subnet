@@ -142,7 +142,7 @@ async def fetch_subnet_liquidity_positions(
                 wallet_stub = _StubWallet(cold_ss58)
                 try:
                     block = await subtensor.block
-                    bt.logging.warning(f"[liquidity_utils] Querying {cold_ss58[:6]}…, subnet {uid}, block {block},reuse {block is None}")
+                    # bt.logging.warning(f"[liquidity_utils] Querying {cold_ss58[:6]}…, subnet {uid}, block {block},reuse {block is None}")
                     positions = await subtensor.get_liquidity_list(
                         wallet=wallet_stub,
                         netuid=uid,
@@ -173,7 +173,7 @@ async def fetch_subnet_liquidity_positions(
         ls = await _query_single_subnet(uid)
         liquidity_subnets.append(ls)
 
-    bt.logging.info(
+    bt.logging.success(
         f"[liquidity_utils] Finished – collected liquidity for "
         f"{len(liquidity_subnets)} subnet(s)"
     )
