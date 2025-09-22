@@ -137,7 +137,7 @@ class VoteAPIClient:
         return [
             Vote(
                 voter_hotkey=hk,
-                _height=_TEMPORAL_BLOCK_HEIGHT,
+                block_height=_TEMPORAL_BLOCK_HEIGHT,
                 voter_stake=_TEMPORAL_STAKE,
                 weights=_TEMPORAL_WEIGHTS,
                 timestamp=now,
