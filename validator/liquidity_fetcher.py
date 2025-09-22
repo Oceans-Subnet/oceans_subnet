@@ -126,7 +126,7 @@ class LiquidityFetcher:
 
             P_bal = Balance.from_tao(P)
 
-            bt.logging.info(
+            bt.logging.warning(
                 f"[LiquidityFetcher] Subnet {ls.netuid} → "
                 f"{ls.unique_coldkeys} coldkeys, {ls.total_positions} positions (P={P:.10f})"
             )
@@ -150,7 +150,7 @@ class LiquidityFetcher:
                         or p_high <= p_low
                     ):
                         # reject zero/negative/degenerate ranges
-                        bt.logging.debug(
+                        bt.logging.warning(
                             f"[LiquidityFetcher] Drop degenerate range for {coldkey[:6]}… "
                             f"(low={p_low}, high={p_high})"
                         )
@@ -164,7 +164,7 @@ class LiquidityFetcher:
                     if self.MIN_RELATIVE_WIDTH > 0.0:
                         rel_width = (p_high - p_low) / P
                         if rel_width < self.MIN_RELATIVE_WIDTH:
-                            bt.logging.debug(
+                            bt.logging.warning(
                                 f"[LiquidityFetcher] Drop narrow band for {coldkey[:6]}… "
                                 f"rel_width={rel_width:.6f} < {self.MIN_RELATIVE_WIDTH:.6f}"
                             )
@@ -174,7 +174,7 @@ class LiquidityFetcher:
                     try:
                         alpha_amt, tao_amt = pos.to_token_amounts(P_bal)
                     except Exception as e:
-                        bt.logging.debug(
+                        bt.logging.warning(
                             f"[LiquidityFetcher] to_token_amounts() failed for {coldkey[:6]}…: {e}"
                         )
                         continue
@@ -192,7 +192,7 @@ class LiquidityFetcher:
                 if tao_val <= 0.0:
                     continue
                 if not self._exists(db, ck, subnet, blk):
-                    bt.logging.debug(
+                    bt.logging.warning(
                         f"[LiquidityFetcher] New snapshot: {ck[:6]}… "
                         f"subnet {subnet} blk {blk} → {tao_val:.9f} TAO"
                     )
@@ -207,7 +207,7 @@ class LiquidityFetcher:
 
         if new_rows:
             self.cache.persist_liquidity(new_rows)
-            bt.logging.info(f"[LiquidityFetcher] Persisted {len(new_rows)} snapshots")
+            bt.logging.warning(f"[LiquidityFetcher] Persisted {len(new_rows)} snapshots")
 
         # 5️⃣  Build liquidity map for RewardCalculator ------------------
         liq_map: Dict[int, Dict[int, float]] = defaultdict(dict)
@@ -229,7 +229,7 @@ class LiquidityFetcher:
             )
 
         self.cache.liquidity = liq_map
-        bt.logging.info(
+        bt.logging.warning(
             f"[LiquidityFetcher] liquidity map updated "
             f"({len(liq_map)} subnets, total "
             f"{sum(len(v) for v in liq_map.values())} UIDs)"
