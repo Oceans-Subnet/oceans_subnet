@@ -241,7 +241,7 @@ class LiquidityFetcher:
             f"(liquidity map {liq_map}"
             f"{sum(len(v) for v in liq_map.values())} UIDs)"
         )
-        return new_rows
+        return liq_map
 
     # ------------------------------------------------------------------ #
     # Helpers
