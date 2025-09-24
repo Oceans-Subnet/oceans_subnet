@@ -206,6 +206,7 @@ class LiquidityFetcher:
         bt.logging.warning(
             f"[LiquidityFetcher] liquidity map built "
             f"({sum(len(v) for v in liq_map.values())} UIDs total)"
+            f"liq_map={liq_map}"
         )
         return liq_map
 
