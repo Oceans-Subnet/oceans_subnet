@@ -238,7 +238,6 @@ class BaseValidatorNeuron(BaseNeuron):
         bt.logging.warning(
             "Scores updated (EMA). "
             f"alpha={alpha:.3f} | "
-            f"pre: nnz={pre_nnz}, sum={pre_sum:.6f}, max={pre_max:.6f} | "
             f"post: nnz={post_nnz}, sum={post_sum:.6f}, max={post_max:.6f} | "
             f"top5={top5}"
         )
