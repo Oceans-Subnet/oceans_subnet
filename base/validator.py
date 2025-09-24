@@ -220,11 +220,6 @@ class BaseValidatorNeuron(BaseNeuron):
         scattered = np.zeros_like(self.scores, dtype=np.float64)
         scattered[uids] = rewards
 
-        # Log brief pre-update summary (BEFORE EMA)
-        pre_nnz = int(np.count_nonzero(self.scores))
-        pre_sum = float(self.scores.sum())
-        pre_max = float(self.scores.max() if self.scores.size else 0.0)
-
         alpha = 0.1
         # EMA update
         self.scores = alpha * scattered + (1.0 - alpha) * self.scores
