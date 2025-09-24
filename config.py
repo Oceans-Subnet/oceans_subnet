@@ -4,15 +4,13 @@ Global configuration entry‑point.
 ▪ Loads environment variables from `.env` (if present)
 ▪ Exposes a single singleton `settings` object
 ▪ Keeps legacy constant names so existing code keeps working
+▪ Removed all cache / persistence related settings (no DB_URI, etc.)
 """
 
 from __future__ import annotations
 
-import os
-from decimal import Decimal
 from functools import lru_cache
-from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import AnyUrl, Field, validator
@@ -28,9 +26,6 @@ DEFAULT_NETUID = 66
 DECIMALS = 10**9
 SAMPLE_POINTS = 10
 
-# ── Validator specific  ───────────────────────────────────────────────
-
-
 # ──────────────────────────────────────────────────────────────
 # 1. Settings object (use everywhere instead of os.getenv)
 # ──────────────────────────────────────────────────────────────
@@ -40,8 +35,7 @@ class _Settings(BaseSettings):
     PROMETHEUS_PORT: int = Field(8000, env="PROMETHEUS_PORT")
     JSON_LOGS: bool = Field(False, env="JSON_LOGS")
 
-    # --- Storage -----------------------------------------------------------------
-    DB_URI: str = Field("sqlite:///./oceans_cache.db", env="DB_URI")
+    # (Removed: Storage / DB_URI — no persistence/cache in this codebase)
 
     # --- Bittensor / Subtensor network ------------------------------------------
     BITTENSOR_NETWORK: str = Field("finney", env="BITTENSOR_NETWORK")
@@ -50,15 +44,11 @@ class _Settings(BaseSettings):
 
     # --- Validator specific ------------------------------------------------------
     VOTE_API_ENDPOINT: AnyUrl | str = Field(
-    "TODO",    # ← To be filled
-    env="VOTE_API_ENDPOINT",
+        "TODO",  # intentionally string-typed fallback so it doesn't fail validation
+        env="VOTE_API_ENDPOINT",
     )
-    VOTE_POLL_INTERVAL: int = Field(
-        30, env="VOTE_POLL_INTERVAL"
-    )  # seconds between polling UI
-    LIQUIDITY_REFRESH_BLOCKS: int = Field(
-        1, env="LIQUIDITY_REFRESH_BLOCKS"
-    )  # how many chain blocks between fetches
+    VOTE_POLL_INTERVAL: int = Field(30, env="VOTE_POLL_INTERVAL")  # seconds
+    LIQUIDITY_REFRESH_BLOCKS: int = Field(1, env="LIQUIDITY_REFRESH_BLOCKS")
     EPOCH_SECONDS: int = Field(600, env="EPOCH_SECONDS")  # fallback if chain epoch unavailable
     MAX_CONCURRENCY: int = Field(5, env="MAX_CONCURRENCY")  # rpc calls in parallel
 
