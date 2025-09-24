@@ -1,8 +1,9 @@
 """
-Validator‑side helper that pulls liquidity data from chain, converts it
-into storage‑layer snapshots and persists only *new* records.
+Validator‑side helper that pulls liquidity data from chain and returns an
+in‑memory map for reward calculation.
 
 All amounts are denominated in **TAO**.
+No storage/caching/persistence is performed.
 """
 from __future__ import annotations
 
@@ -10,17 +11,14 @@ import asyncio
 import logging
 import math
 from collections import defaultdict
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional
 
 import bittensor as bt
 from bittensor import AsyncSubtensor            # type: ignore
 from bittensor.utils.balance import Balance
 from bittensor.utils.balance import fixed_to_float
-from sqlalchemy.orm import Session
 
 from config import settings
-from storage.models import LiquiditySnapshot
-from validator.state_cache import StateCache
 from utils.liquidity_utils import (
     LiquiditySubnet,
     fetch_subnet_liquidity_positions,
@@ -32,22 +30,17 @@ log = logging.getLogger("validator.liquidity_fetcher")
 
 class LiquidityFetcher:
     """
-    Fetches on‑chain liquidity, stores snapshots, and updates
-    `cache.liquidity` in the form:
+    Fetches on‑chain liquidity and returns:
 
-        cache.liquidity = { liquidity_subnet_id: { uid_on_66: tao, … }, … }
+        { liquidity_subnet_id: { uid_on_primary: tao, … }, … }
 
-    **Important change**: we no longer sum `position.liquidity` (the Uniswap "L").
+    **Important note**: we do not sum `position.liquidity` (Uniswap "L").
     We compute token amounts at the current subnet price via
     `LiquidityPosition.to_token_amounts(price)` and count **only TAO**.
     """
 
     # --- Optional policy knobs (you can tune these) -------------------- #
-    # Minimum relative width of a position band to be counted.
-    # Example: 0.003 => require band at least 0.3% wide around current price.
     MIN_RELATIVE_WIDTH: float = float(getattr(settings, "MIN_RELATIVE_WIDTH", 0.0))
-
-    # If True, only count positions where current price is strictly in-range.
     COUNT_ONLY_IN_RANGE: bool = bool(getattr(settings, "COUNT_ONLY_IN_RANGE", True))
 
     # ------------------------------------------------------------------ #
@@ -55,18 +48,16 @@ class LiquidityFetcher:
     # ------------------------------------------------------------------ #
     def __init__(
         self,
-        cache: StateCache,
         *,
-        primary_netuid: int,   # ← validator’s own subnet (66)
+        primary_netuid: int,   # ← validator’s own subnet (e.g., 66)
         fetch_fn: Optional[
             Callable[..., Awaitable[List[LiquiditySubnet]]]
         ] = None,
     ) -> None:
-        self.cache = cache
         self.primary_netuid = int(primary_netuid)
         self._fetch_fn = fetch_fn or self._default_fetch
 
-        # Cache: coldkey → UID (on subnet 66)
+        # Cache inside the fetcher: coldkey → UID (on primary subnet)
         self._primary_uid_map: Dict[str, int] = {}
         self._primary_loaded: bool = False
 
@@ -78,10 +69,16 @@ class LiquidityFetcher:
         *,
         netuid: Optional[int] = None,
         block: Optional[int] = None,
-    ) -> List[LiquiditySnapshot]:
+    ) -> Dict[int, Dict[int, float]]:
+        """
+        Returns
+        -------
+        Dict[int, Dict[int, float]]
+            {subnet_id: {uid_on_primary: tao_value, ...}, ...}
+        """
         if netuid == 0:
             bt.logging.warning("[LiquidityFetcher] Ignoring request for subnet 0")
-            return []
+            return {}
 
         bt.logging.info(f"[LiquidityFetcher] Fetching liquidity (netuid={netuid})…")
 
@@ -105,7 +102,7 @@ class LiquidityFetcher:
         # 2.5️⃣ Fetch current prices once per subnet ---------------------
         subnet_ids = [ls.netuid for ls in liquidity_subnets]
         bt.logging.warning(
-            f"Fetching current prices, block={block}"
+            f"[LiquidityFetcher] Fetching current prices, block={block}"
         )
         price_map = await self._fetch_current_prices(subnet_ids, block=block)
         bt.logging.warning(f"[LiquidityFetcher] Prices: {price_map}")
@@ -115,7 +112,8 @@ class LiquidityFetcher:
             )
 
         # 3️⃣  Aggregate TAO per coldkey / subnet ------------------------
-        aggregated: Dict[Tuple[str, int, int], float] = {}
+        # (internal aggregation keyed by (coldkey, subnet))
+        aggregated: Dict[tuple, float] = {}
 
         for ls in liquidity_subnets:
             P = price_map.get(ls.netuid, 0.0)
@@ -150,7 +148,6 @@ class LiquidityFetcher:
                         or p_high <= 0.0
                         or p_high <= p_low
                     ):
-                        # reject zero/negative/degenerate ranges
                         bt.logging.warning(
                             f"[LiquidityFetcher] Drop degenerate range for {coldkey[:6]}… "
                             f"(low={p_low}, high={p_high})"
@@ -171,55 +168,26 @@ class LiquidityFetcher:
                             )
                             continue
 
-                    # Compute token amounts at current price
+                    # Compute token amounts at current price and take **only TAO**
                     try:
-                        alpha_amt, tao_amt = pos.to_token_amounts(P_bal)
+                        _alpha_amt, tao_amt = pos.to_token_amounts(P_bal)
                     except Exception as e:
                         bt.logging.warning(
                             f"[LiquidityFetcher] to_token_amounts() failed for {coldkey[:6]}…: {e}"
                         )
                         continue
 
-                    # Sum **only the TAO leg** (true TAO provided)
                     tao_sum += self._bal_to_tao(tao_amt)
 
                 if tao_sum > 0.0:
-                    aggregated[(coldkey, ls.netuid, block or 0)] = tao_sum
+                    aggregated[(coldkey, ls.netuid)] = aggregated.get((coldkey, ls.netuid), 0.0) + tao_sum
 
-        # 4️⃣  Persist new LiquiditySnapshot rows ------------------------
-        bt.logging.warning(
-            f"[LiquidityFetcher] Aggregated {aggregated} (coldkey, subnet) pairs"
-        )
-        new_rows: List[LiquiditySnapshot] = []
-        with self.cache._session() as db:  # pylint: disable=protected-access
-            for (ck, subnet, blk), tao_val in aggregated.items():
-                if tao_val <= 0.0:
-                    continue
-                if not self._exists(db, ck, subnet, blk):
-                    bt.logging.warning(
-                        f"[LiquidityFetcher] New snapshot: {ck[:6]}… "
-                        f"subnet {subnet} blk {blk} → {tao_val:.9f} TAO"
-                    )
-                    new_rows.append(
-                        LiquiditySnapshot(
-                            wallet_hotkey=ck,
-                            subnet_id=subnet,
-                            tao_value=tao_val,
-                            block_height=blk,
-                        )
-                    )
-        bt.logging.warning(
-            f"new_rows prepared: {new_rows}"
-        )
+        bt.logging.warning(f"[LiquidityFetcher] Aggregated entries: {len(aggregated)}")
 
-        if new_rows:
-            self.cache.persist_liquidity(new_rows)
-            bt.logging.warning(f"[LiquidityFetcher] Persisted {len(new_rows)} snapshots")
-
-        # 5️⃣  Build liquidity map for RewardCalculator ------------------
+        # 4️⃣  Build liquidity map for RewardCalculator ------------------
         liq_map: Dict[int, Dict[int, float]] = defaultdict(dict)
 
-        for (ck, subnet, _), tao_val in aggregated.items():
+        for (ck, subnet), tao_val in aggregated.items():
             if tao_val <= 0.0:
                 continue
             uid = self._primary_uid_map.get(ck)
@@ -229,36 +197,21 @@ class LiquidityFetcher:
                     f"{self.primary_netuid} – skipped"
                 )
                 continue
-            liq_map[subnet][uid] = tao_val
+            liq_map[int(subnet)][int(uid)] = float(tao_val)
             bt.logging.warning(
                 f"[LiquidityFetcher] Map entry: subnet {subnet} uid {uid} "
                 f"→ {tao_val:.9f} TAO"
             )
 
-        self.cache.liquidity = liq_map
         bt.logging.warning(
-            f"[LiquidityFetcher] liquidity map updated "
-            f"(liquidity map {liq_map}"
-            f"{sum(len(v) for v in liq_map.values())} UIDs)"
+            f"[LiquidityFetcher] liquidity map built "
+            f"({sum(len(v) for v in liq_map.values())} UIDs total)"
         )
         return liq_map
 
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    @staticmethod
-    def _exists(db: Session, wallet: str, subnet: int, block_height: int) -> bool:
-        return (
-            db.query(LiquiditySnapshot)
-            .filter_by(
-                wallet_hotkey=wallet,
-                subnet_id=subnet,
-                block_height=block_height,
-            )
-            .first()
-            is not None
-        )
-
     @staticmethod
     def _bal_to_tao(b: Balance) -> float:
         """
@@ -338,7 +291,7 @@ class LiquidityFetcher:
 
         return prices
 
-    # ---------- UID map (coldkey → UID on subnet 66) ------------------- #
+    # ---------- UID map (coldkey → UID on primary subnet) -------------- #
     async def _load_primary_uid_map(self, *, block: Optional[int]) -> None:
         bt.logging.warning(
             f"[LiquidityFetcher] Loading UID map for subnet {self.primary_netuid}"

@@ -54,7 +54,6 @@ import bittensor as bt
 from bittensor import BLOCKTIME
 
 from base.validator import BaseValidatorNeuron
-from validator.state_cache import StateCache
 from validator.vote_fetcher import VoteFetcher
 from validator.liquidity_fetcher import LiquidityFetcher
 from validator.rewards import RewardCalculator
@@ -80,11 +79,10 @@ class EpochValidatorNeuron(BaseValidatorNeuron):
         self._epoch_len: Optional[int] = None
         self.epoch_end_block: Optional[int] = None
 
-        # ––– Oceans components
-        self.cache = StateCache()
-        self.vote_fetcher = VoteFetcher(self.cache)
-        self.liq_fetcher = LiquidityFetcher(self.cache,primary_netuid=self.config.netuid)
-        self.reward_calc = RewardCalculator(self.cache)
+        # ––– Oceans components (no cache / persistence)
+        self.vote_fetcher = VoteFetcher()
+        self.liq_fetcher = LiquidityFetcher(primary_netuid=self.config.netuid)
+        self.reward_calc = RewardCalculator()
 
     # ---------------------------------------------------- #
     # Epoch length detection

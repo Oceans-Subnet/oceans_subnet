@@ -1,26 +1,33 @@
 """
 Validator‑side *business logic* executed once at every epoch head.
 """
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import bittensor as bt
+
+from api.schemas import Vote  # for type clarity
 
 
 async def forward(neuron) -> None:
     """
     Compute miner‑score vector for the current epoch and store it on the
     running validator (`neuron`) via `neuron.update_scores()`.
+
+    Now purely **stateless**: we fetch fresh inputs and pass them directly
+    to the RewardCalculator without caching or persistence.
     """
     # 1️⃣  Ingest fresh data ------------------------------------------------
     bt.logging.warning("[forward] Fetching latest on‑chain and off‑chain data…")
-    neuron.vote_fetcher.fetch_and_store()             # synchronous
-    await neuron.liq_fetcher.fetch_and_store()        # asynchronous – await
+    votes: List[Vote] = neuron.vote_fetcher.fetch_and_store()      # synchronous, returns votes
+    liq_map = await neuron.liq_fetcher.fetch_and_store()           # asynchronous, returns {subnet: {uid: tao}}
 
     # 2️⃣  Compute per‑miner raw scores ------------------------------------
     bt.logging.warning("[forward] Computing raw miner scores…")
     uid_scores: Dict[int, float] = neuron.reward_calc.compute(
-        metagraph=neuron.metagraph
+        metagraph=neuron.metagraph,
+        votes=votes,
+        liquidity=liq_map,
     )
 
     # 3️⃣  Convert {uid: score} → NumPy arrays in metagraph order ----------
