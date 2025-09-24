@@ -14,7 +14,7 @@ from collections import defaultdict
 from typing import Awaitable, Callable, Dict, List, Optional
 
 import bittensor as bt
-from bittensor import AsyncSubtensor            # type: ignore
+from bittensor import AsyncSubtensor         
 from bittensor.utils.balance import Balance
 from bittensor.utils.balance import fixed_to_float
 

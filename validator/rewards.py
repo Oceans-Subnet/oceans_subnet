@@ -12,7 +12,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 import bittensor as bt
-from api.schemas import Vote  # for type clarity
+from api.schemas import Vote 
 
 
 class RewardCalculator:

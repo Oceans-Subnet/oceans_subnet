@@ -8,8 +8,6 @@ import bittensor as bt
 from abc import ABC, abstractmethod
 import time
 import traceback
-import requests
-import re
 from base.utils.config import check_config, add_args, config
 from base.utils.misc import ttl_get_block
 
@@ -192,27 +190,3 @@ class BaseNeuron(ABC):
         bt.logging.trace(
             "load_state() not implemented for this neuron. You can implement this function to load model checkpoints or other useful data."
         )
-
-    # def parse_versions(self):
-    #     self.version = __version__
-    #     self.least_acceptable_version = __least_acceptable_version__
-
-    #     bt.logging.info("Parsing versions...")
-    #     response = requests.get(version_url)
-    #     bt.logging.info(f"Response: {response.status_code}")
-    #     if response.status_code == 200:
-    #         content = response.text
-
-    #         version_pattern = r"__version__\s*=\s*['\"]([^'\"]+)['\"]"
-    #         least_acceptable_version_pattern = r"__least_acceptable_version__\s*=\s*['\"]([^'\"]+)['\"]"
-
-    #         try:
-    #             version = re.search(version_pattern, content).group(1)
-    #             least_acceptable_version = re.search(least_acceptable_version_pattern, content).group(1)
-    #         except AttributeError as e:
-    #             bt.logging.error(f"While parsing versions got error: {e}")
-    #             return
-
-    #         self.version = version
-    #         self.least_acceptable_version = least_acceptable_version
-    #     return

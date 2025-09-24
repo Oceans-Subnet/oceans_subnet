@@ -21,9 +21,6 @@ import bittensor as bt
 from api.client import VoteAPIClient
 from api.schemas import Vote
 
-# Retained for dependency parity; the fetcher never calls requests directly.
-import requests  # noqa: F401
-
 # --------------------------------------------------------------------------- #
 # Module‑level logger
 # --------------------------------------------------------------------------- #
