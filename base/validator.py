@@ -1,5 +1,5 @@
 # ============================================================================ #
-# oceans/base/validator.py                                                   #
+# oceans/base/validator.py                                                     #
 # ============================================================================ #
 """
 Validator foundations.
@@ -14,7 +14,7 @@ import asyncio
 import threading
 import argparse
 from traceback import print_exception
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Tuple
 
 import numpy as np
 import bittensor as bt
@@ -41,7 +41,9 @@ class BaseValidatorNeuron(BaseNeuron):
         super().__init__(config=config)
 
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
-        self.scores = np.zeros(self.metagraph.n, dtype=np.float32)
+
+        # Use float64 for scores to avoid any suspicion of loss of precision.
+        self.scores = np.zeros(self.metagraph.n, dtype=np.float64)
 
         self.dendrite = bt.dendrite(wallet=self.wallet)
         bt.logging.info(f"Dendrite: {self.dendrite}")
@@ -53,6 +55,7 @@ class BaseValidatorNeuron(BaseNeuron):
         else:
             bt.logging.warning("axon off, not serving ip to chain.")
 
+        # Event loop & run thread flags
         self.loop = asyncio.get_event_loop()
         self.should_exit = False
         self.is_running = False
@@ -174,11 +177,23 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Resize scores array if the subnet grew
         if len(self.hotkeys) < len(self.metagraph.hotkeys):
-            new_scores = np.zeros(self.metagraph.n, dtype=np.float32)
+            new_scores = np.zeros(self.metagraph.n, dtype=self.scores.dtype)
             new_scores[: len(self.scores)] = self.scores
             self.scores = new_scores
 
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+
+    # ---------------------- score update (EMA) ------------------------ #
+    def _top_k_summary(
+        self, arr: np.ndarray, k: int = 5
+    ) -> List[Tuple[int, float]]:
+        """Return top-k (uid, value) from `arr` for compact logging."""
+        if arr.size == 0:
+            return []
+        k = max(1, min(k, arr.size))
+        idx = np.argpartition(arr, -k)[-k:]
+        idx = idx[np.argsort(arr[idx])[::-1]]
+        return [(int(i), float(arr[i])) for i in idx if arr[i] > 0.0]
 
     def update_scores(self, rewards: np.ndarray, uids: List[int]):
         """
@@ -186,10 +201,11 @@ class BaseValidatorNeuron(BaseNeuron):
         """
         # ---- SAFEGUARD: initialise if ever None -----------------------
         if not isinstance(self.scores, np.ndarray):
-            self.scores = np.zeros(self.metagraph.n, dtype=np.float32)
+            self.scores = np.zeros(self.metagraph.n, dtype=np.float64)
         # ---------------------------------------------------------------
 
-        rewards = np.nan_to_num(np.asarray(rewards), nan=0.0)
+        # Ensure float64 internally for clarity/precision.
+        rewards = np.nan_to_num(np.asarray(rewards, dtype=np.float64), nan=0.0)
         uids = np.asarray(uids, dtype=int)
 
         if rewards.size == 0 or uids.size == 0:
@@ -200,20 +216,39 @@ class BaseValidatorNeuron(BaseNeuron):
                 f"Shape mismatch: rewards {rewards.shape} vs uids {uids.shape}"
             )
 
-        scattered = np.zeros_like(self.scores)
+        # Scatter rewards into full-size vector (in metagraph UID space)
+        scattered = np.zeros_like(self.scores, dtype=np.float64)
         scattered[uids] = rewards
 
+        # Log brief pre-update summary (BEFORE EMA)
+        pre_nnz = int(np.count_nonzero(self.scores))
+        pre_sum = float(self.scores.sum())
+        pre_max = float(self.scores.max() if self.scores.size else 0.0)
+
         alpha = 0.1
-        bt.logging.warning(
-            f"Updating scores with alpha={alpha}, "
-            f"rewards={rewards}, uids={uids}, scattered={scattered}, scores={self.scores}"
-        )
-
+        # EMA update
         self.scores = alpha * scattered + (1.0 - alpha) * self.scores
-        bt.logging.debug(
-            f"Updated scores: {self.scores}, "
+
+        # POST-update summary (this is what you want to see)
+        post_nnz = int(np.count_nonzero(self.scores))
+        post_sum = float(self.scores.sum())
+        post_max = float(self.scores.max() if self.scores.size else 0.0)
+        top5 = self._top_k_summary(self.scores, k=5)
+
+        bt.logging.warning(
+            "Scores updated (EMA). "
+            f"alpha={alpha:.3f} | "
+            f"pre: nnz={pre_nnz}, sum={pre_sum:.6f}, max={pre_max:.6f} | "
+            f"post: nnz={post_nnz}, sum={post_sum:.6f}, max={post_max:.6f} | "
+            f"top5={top5}"
         )
 
+        # Keep very detailed arrays at DEBUG level only (optional)
+        bt.logging.debug(f"rewards(scattered) nnz={int(np.count_nonzero(scattered))}, "
+                         f"sum={float(scattered.sum()):.6f}")
+        bt.logging.debug(f"full scores vector: {self.scores}")
+
+    # ---------------------- miner ordering helper --------------------- #
     def get_miner_uids(self, *, exclude: Optional[List[int]] = None) -> np.ndarray:
         """
         Returns a shuffled array of miner UIDs, excluding any specified.
@@ -230,6 +265,7 @@ class BaseValidatorNeuron(BaseNeuron):
         rng.shuffle(uids)
         return uids
 
+    # -------------------------- state I/O ----------------------------- #
     def save_state(self):
         bt.logging.info("Saving validator state.")
         np.savez(

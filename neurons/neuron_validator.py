@@ -106,7 +106,7 @@ class EpochValidatorNeuron(BaseValidatorNeuron):
                 sleep_s = random.uniform(10 * 60, 20 * 60)
                 mins = int(sleep_s // 60)
                 secs = int(sleep_s % 60)
-                bt.logging.info(
+                bt.logging.warning(
                     f"[sleep] Sleeping {mins}m {secs:02d}s before next iteration…"
                 )
                 await asyncio.sleep(sleep_s)
