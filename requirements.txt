@@ -13,6 +13,5 @@ loguru
 rich
 bittensor-cli
 pydantic-settings
-SQLAlchemy
 httpx
 pydantic

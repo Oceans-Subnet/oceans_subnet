@@ -1,109 +1,56 @@
 """
-Local persistence layer for snapshots.
+Lightweight in‑memory model types for optional structured logging / typing.
 
-▪ Uses SQLite (default URI comes from settings.DB_URI)
-▪ SQLAlchemy ORM keeps things simple & type‑safe
+There is **no database** and **no SQLAlchemy** here anymore.
+These classes are plain dataclasses that mirror the old ORM shapes
+just enough to keep type hints and any incidental references working.
 """
 from __future__ import annotations
 
 import datetime as _dt
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Dict, Optional
 
-from sqlalchemy import (
-    JSON,
-    Column,
-    DateTime,
-    Float,
-    Integer,
-    String,
-    create_engine,
-)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
 
-from config import get_settings
-
-settings = get_settings()
-
-# ──────────────────────────────────────────────────────────────
-# 1. Engine & Session factory
-# ──────────────────────────────────────────────────────────────
-_ENGINE = create_engine(
-    settings.DB_URI,
-    echo=False,
-    connect_args={"check_same_thread": False},  # required for SQLite multithread
-)
-SessionLocal: sessionmaker[Session] = sessionmaker(
-    autocommit=False, autoflush=False, bind=_ENGINE
-)
-
-# ──────────────────────────────────────────────────────────────
-# 2. Declarative Base
-# ──────────────────────────────────────────────────────────────
-Base = declarative_base()
+__all__ = ["VoteSnapshot", "LiquiditySnapshot"]
 
 
 # ──────────────────────────────────────────────────────────────
-# 3. ORM models
+# Dataclasses (no persistence)
 # ──────────────────────────────────────────────────────────────
-class VoteSnapshot(Base):
+@dataclass
+class VoteSnapshot:
     """
     One snapshot of the full subnet‑weights vector produced by α‑Stake voting.
+    Plain data holder – not persisted.
     """
+    block_height: int
+    voter_hotkey: str
+    voter_stake: float
+    # JSON dict equivalent: {subnet_id: weight, …}
+    weights: Dict[int, float]
 
-    __tablename__ = "vote_snapshots"
+    # Timestamp when the snapshot object was created (UTC).
+    ts: _dt.datetime = field(default_factory=_dt.datetime.utcnow)
 
-    id: int = Column(Integer, primary_key=True, index=True)
-    block_height: int = Column(Integer, nullable=False, index=True)
-    voter_hotkey: str = Column(String(64), nullable=False, index=True)
-
-    # New column: stake held by the voter at that snapshot
-    voter_stake: float = Column(Float, nullable=False)
-
-    # JSON dict: {subnet_id: weight, …}
-    weights: Any = Column(JSON, nullable=False)
-
-    ts: _dt.datetime = Column(
-        DateTime(timezone=True), default=_dt.datetime.utcnow, nullable=False, index=True
-    )
+    # Optional compatibility field that used to be the DB primary key.
+    # Kept here as Optional to avoid breaking any legacy code paths.
+    id: Optional[int] = None
 
 
-class LiquiditySnapshot(Base):
+@dataclass
+class LiquiditySnapshot:
     """
     Liquidity provided by one miner in one subnet at a given block.
-
-    All values are denominated in **TAO**.
+    All values are denominated in **TAO**. Plain data holder – not persisted.
     """
+    wallet_hotkey: str
+    subnet_id: int
+    tao_value: float
+    block_height: int
 
-    __tablename__ = "liquidity_snapshots"
+    # Timestamp when the snapshot object was created (UTC).
+    ts: _dt.datetime = field(default_factory=_dt.datetime.utcnow)
 
-    id: int = Column(Integer, primary_key=True, index=True)
-    wallet_hotkey: str = Column(String(64), nullable=False, index=True)
-    subnet_id: int = Column(Integer, nullable=False, index=True)
-    tao_value: float = Column(Float, nullable=False)         # ← renamed
-    block_height: int = Column(Integer, nullable=False, index=True)
-    ts: _dt.datetime = Column(
-        DateTime(timezone=True), default=_dt.datetime.utcnow, nullable=False, index=True
-    )
-
-
-# ──────────────────────────────────────────────────────────────
-# 4. Helpers
-# ──────────────────────────────────────────────────────────────
-def init_db() -> None:
-    """
-    Call once on application start‑up (validator & miner entry points).
-    Ensures schema exists.
-    """
-    Base.metadata.create_all(bind=_ENGINE)
-
-
-def get_session() -> Session:
-    """
-    Dependency injection helper – use via `with get_session() as db: …`
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    # Optional compatibility field that used to be the DB primary key.
+    id: Optional[int] = None
