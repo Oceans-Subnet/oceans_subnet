@@ -14,7 +14,7 @@ from collections import defaultdict
 from typing import Awaitable, Callable, Dict, List, Optional
 
 import bittensor as bt
-from bittensor import AsyncSubtensor         
+from bittensor import AsyncSubtensor            # type: ignore
 from bittensor.utils.balance import Balance
 from bittensor.utils.balance import fixed_to_float
 
@@ -133,29 +133,48 @@ class LiquidityFetcher:
             for coldkey, positions in ls.coldkey_positions.items():
                 tao_sum = 0.0
 
-                for pos in positions:
+                for idx, pos in enumerate(positions, start=1):
+                    pos_ctx = f"subnet {ls.netuid} | coldkey {coldkey[:6]}… | pos#{idx}"
+
+                    # Start analysis for this position
+                    bt.logging.warning(f"[LiquidityFetcher] Analyzing position {pos_ctx}")
+
                     # Defensive guards against invalid/degenerate ranges
                     try:
                         p_low = float(pos.price_low)
                         p_high = float(pos.price_high)
-                    except Exception:
+                    except Exception as e:
+                        bt.logging.warning(
+                            f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                            f"failed to read price bounds: {e}"
+                        )
                         continue
 
-                    if (
-                        not math.isfinite(p_low)
-                        or not math.isfinite(p_high)
-                        or p_low <= 0.0
-                        or p_high <= 0.0
-                        or p_high <= p_low
-                    ):
+                    if not (math.isfinite(p_low) and math.isfinite(p_high)):
                         bt.logging.warning(
-                            f"[LiquidityFetcher] Drop degenerate range for {coldkey[:6]}… "
-                            f"(low={p_low}, high={p_high})"
+                            f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                            f"non‑finite bounds low={p_low}, high={p_high}"
+                        )
+                        continue
+                    if p_low <= 0.0 or p_high <= 0.0:
+                        bt.logging.warning(
+                            f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                            f"non‑positive bounds low={p_low}, high={p_high}"
+                        )
+                        continue
+                    if p_high <= p_low:
+                        bt.logging.warning(
+                            f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                            f"degenerate range (high ≤ low) low={p_low}, high={p_high}"
                         )
                         continue
 
                     # Optional: only reward *active* liquidity
                     if self.COUNT_ONLY_IN_RANGE and not (p_low < P < p_high):
+                        bt.logging.warning(
+                            f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                            f"out of range at P={P:.10f} (low={p_low}, high={p_high})"
+                        )
                         continue
 
                     # Optional: enforce minimal band width (as fraction of current price)
@@ -163,8 +182,9 @@ class LiquidityFetcher:
                         rel_width = (p_high - p_low) / P
                         if rel_width < self.MIN_RELATIVE_WIDTH:
                             bt.logging.warning(
-                                f"[LiquidityFetcher] Drop narrow band for {coldkey[:6]}… "
-                                f"rel_width={rel_width:.6f} < {self.MIN_RELATIVE_WIDTH:.6f}"
+                                f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                                f"relative width {rel_width:.6f} < "
+                                f"min {self.MIN_RELATIVE_WIDTH:.6f}"
                             )
                             continue
 
@@ -173,14 +193,33 @@ class LiquidityFetcher:
                         _alpha_amt, tao_amt = pos.to_token_amounts(P_bal)
                     except Exception as e:
                         bt.logging.warning(
-                            f"[LiquidityFetcher] to_token_amounts() failed for {coldkey[:6]}…: {e}"
+                            f"[LiquidityFetcher] Discard position ({pos_ctx}): "
+                            f"to_token_amounts() failed: {e}"
                         )
                         continue
 
-                    tao_sum += self._bal_to_tao(tao_amt)
+                    tao_val = self._bal_to_tao(tao_amt)
+                    tao_sum += tao_val
+
+                    bt.logging.warning(
+                        f"[LiquidityFetcher] Accepted position ({pos_ctx}): "
+                        f"contributes {tao_val:.9f} TAO at P={P:.10f} "
+                        f"(low={p_low}, high={p_high})"
+                    )
 
                 if tao_sum > 0.0:
-                    aggregated[(coldkey, ls.netuid)] = aggregated.get((coldkey, ls.netuid), 0.0) + tao_sum
+                    aggregated[(coldkey, ls.netuid)] = aggregated.get(
+                        (coldkey, ls.netuid), 0.0
+                    ) + tao_sum
+                    bt.logging.warning(
+                        f"[LiquidityFetcher] Coldkey {coldkey[:6]}… subtotal on subnet {ls.netuid}: "
+                        f"{tao_sum:.9f} TAO"
+                    )
+                else:
+                    bt.logging.warning(
+                        f"[LiquidityFetcher] Coldkey {coldkey[:6]}… subtotal on subnet {ls.netuid}: "
+                        f"0.000000000 TAO (no accepted positions or zero contribution)"
+                    )
 
         bt.logging.warning(f"[LiquidityFetcher] Aggregated entries: {len(aggregated)}")
 
@@ -205,7 +244,7 @@ class LiquidityFetcher:
 
         bt.logging.warning(
             f"[LiquidityFetcher] liquidity map built "
-            f"({sum(len(v) for v in liq_map.values())} UIDs total)"
+            f"({sum(len(v) for v in liq_map.values())} UIDs total) "
             f"liq_map={liq_map}"
         )
         return liq_map
