@@ -30,14 +30,8 @@ _TEMPORAL_VOTER_HOTKEYS: List[str] = [
 _TEMPORAL_BLOCK_HEIGHT: int = 6_073_385  # deterministic height
 _TEMPORAL_STAKE: float = 1.0             # every temporal voter gets 1 α
 
-# Inactive / unknown subnets (kept for reference – currently unused)
-_INACTIVE_SUBNETS: Set[int] = {
-    15, 46, 67, 69, 74, 78, 82, 83, 95, 100,
-    101, 104, 110, 112, 115, 116, 117, 118, 119, 120,
-}
-
 # Subnets that currently have user‑supplied liquidity
-ENABLED_USER_LIQUIDITY: Set[int] = {10,27,36,51,73,85,87,97,102,104,106}
+ENABLED_USER_LIQUIDITY: Set[int] = {10,27,36,51,73,85,87,97,102,106}
 # ── NEW LOGIC ────────────────────────────────────────────────────────────
 # Active subnets are **only** those with user liquidity.  The legacy
 # _INACTIVE_SUBNETS list is left untouched for now in case it is needed
