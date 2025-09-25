@@ -3,9 +3,6 @@
 # ============================================================================ #
 """
 Validator foundations.
-
-* BaseValidatorNeuron  – original step-driven loop
-* EpochValidatorNeuron – same features but runs forward() once per epoch
 """
 from __future__ import annotations
 

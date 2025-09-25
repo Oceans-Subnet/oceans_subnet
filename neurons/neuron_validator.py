@@ -59,7 +59,7 @@ from validator.rewards import RewardCalculator
 from validator.forward import forward
 
 
-class EpochValidatorNeuron(BaseValidatorNeuron):
+class OceansValidator(BaseValidatorNeuron):
     """
     Minimal validator (no epoch logic):
       • Instantiates Oceans components (stateless).
@@ -130,7 +130,7 @@ class EpochValidatorNeuron(BaseValidatorNeuron):
 # Entrypoint
 # ──────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    with EpochValidatorNeuron() as validator:
+    with OceansValidator() as validator:
         while True:
             bt.logging.info(f"Validator running... {time.time()}")
             time.sleep(5)
