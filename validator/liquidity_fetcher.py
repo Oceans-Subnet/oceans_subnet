@@ -59,7 +59,6 @@ class LiquidityFetcher:
 
         # Cache inside the fetcher: coldkey → UID (on primary subnet)
         self._primary_uid_map: Dict[str, int] = {}
-        self._primary_loaded: bool = False
 
     # ------------------------------------------------------------------ #
     # PUBLIC – async entry‑point                                         #
@@ -96,8 +95,7 @@ class LiquidityFetcher:
         )
 
         # 2️⃣  Ensure primary‑subnet UID map is loaded once --------------
-        if not self._primary_loaded:
-            await self._load_primary_uid_map(block=block)
+        await self._load_primary_uid_map(block=block)
 
         # 2.5️⃣ Fetch current prices once per subnet ---------------------
         subnet_ids = [ls.netuid for ls in liquidity_subnets]
@@ -343,7 +341,6 @@ class LiquidityFetcher:
             self._primary_uid_map = {
                 str(ck): int(uid) for uid, ck in zip(mg.uids, mg.coldkeys)
             }
-        self._primary_loaded = True
         bt.logging.warning(
             f"[LiquidityFetcher] UID map loaded ({len(self._primary_uid_map)} entries)"
         )
